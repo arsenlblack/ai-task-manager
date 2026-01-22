@@ -1,0 +1,176 @@
+openapi: 3.1.0
+info:
+  title: AI Task Manager API
+  description: AI-first task manager backed by Google Sheets. Explicit, deterministic task operations.
+  version: 1.0.0
+servers:
+  - url: https://script.google.com/macros/s/AKfycbw6xO33uFI7sfEPWwGEQHsPt8S27DlnprYFDWVp-DEgDda6m0Ges7U5WlFGfJGjU86XRA/exec
+paths:
+  /exec:
+    post:
+      operationId: taskAction
+      description: Execute a task-related action. Mutations are explicit and id-based.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - create_task
+                    - update_tasks
+                    - complete_tasks
+                    - snooze_tasks
+                    - get_tasks
+                payload:
+                  oneOf:
+                    - $ref: "#/components/schemas/CreateTaskPayload"
+                    - $ref: "#/components/schemas/UpdateTasksPayload"
+                    - $ref: "#/components/schemas/CompleteTasksPayload"
+                    - $ref: "#/components/schemas/SnoozeTasksPayload"
+                    - $ref: "#/components/schemas/GetTasksPayload"
+              additionalProperties: false
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericResponse"
+components:
+  schemas:
+    CreateTaskPayload:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        priority:
+          type: number
+        start_at:
+          type: string
+        due_at:
+          type: string
+      additionalProperties: false
+    UpdateTasksPayload:
+      type: object
+      required:
+        - tasks
+      properties:
+        tasks:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - id
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              priority:
+                type: number
+              start_at:
+                type: string
+              due_at:
+                type: string
+            additionalProperties: false
+      additionalProperties: false
+    CompleteTasksPayload:
+      type: object
+      required:
+        - ids
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          items:
+            type: string
+      additionalProperties: false
+    SnoozeTasksPayload:
+      type: object
+      required:
+        - tasks
+      properties:
+        tasks:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - id
+              - snoozed_until
+            properties:
+              id:
+                type: string
+              snoozed_until:
+                type: string
+            additionalProperties: false
+      additionalProperties: false
+    GetTasksPayload:
+      type: object
+      required:
+        - filters
+      properties:
+        filters:
+          type: object
+          description: Exact filters explicitly mentioned by the user. No inference allowed.
+          properties:
+            title_contains:
+              type: string
+            status:
+              type: string
+              enum:
+                - active
+                - completed
+            time_range:
+              type: object
+              required:
+                - from
+                - to
+              properties:
+                from:
+                  type: string
+                  format: date-time
+                to:
+                  type: string
+                  format: date-time
+              additionalProperties: false
+            time_field:
+              type: string
+              enum:
+                - created_at
+                - completed_at
+                - start_at
+                - due_at
+                - snoozed_until
+          additionalProperties: false
+        recommend:
+          type: boolean
+          description: Present only if explicitly requested by the user
+      additionalProperties: false
+    GenericResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        tasks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        recommended:
+          type: object
+          additionalProperties: true
+        error:
+          type: string
+        reason:
+          type: string
+      additionalProperties: true
